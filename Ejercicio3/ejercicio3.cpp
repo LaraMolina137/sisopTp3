@@ -41,7 +41,7 @@ int main(int argc, char *argv[]){
     //validar comando de consulta
 
 
-    // while(accion != "quit"){
+    // while(accion != "QUIT"){
 
     //     if(isValidSentence(accion)){
 
