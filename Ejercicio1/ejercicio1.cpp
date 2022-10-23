@@ -46,7 +46,7 @@ class Process
 
 int main()
 {
-    pid_t pid, pid1,pidNieto1, pidNieto2, pidNieto3;
+    pid_t pid;
 
     pid = fork();
 
@@ -54,9 +54,6 @@ int main()
 
         Process father(getpid(), getppid(), 1, "padre");
         father.message();
-
-        int status;
-        pid_t w = waitpid(pid, &status, WUNTRACED);
 
         pid = father.createSon();
         if(pid > 0) {
