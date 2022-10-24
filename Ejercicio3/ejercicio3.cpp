@@ -2,6 +2,9 @@
 #include <cstring>
 #include <sstream>
 #include <iterator>
+#include <fcntl.h> // para el manejo de fifo
+#include <signal.h>
+
 
 using namespace std;
 
@@ -25,47 +28,47 @@ int main(int argc, char *argv[]){
         }
     }
 
-    string entrada;
+    string comando;
 
     //LOGICA DEL CLIENTE
     cout << "INGRESE COMANDO: ";
-    getline(cin, entrada);
+    getline(cin, comando);
+    
+    //cout << comando << endl;
 
-    //Separa el comando de consulta
-    stringstream input_stringstream(entrada); 
-    string comando, sigue_comando;
-    char delimitador =' ';
-    getline(input_stringstream, comando, delimitador);
-    getline(input_stringstream, sigue_comando, delimitador);
+    // string delimiter = " ";
+    // string comando = entrada.substr(0, entrada.find(delimiter));
+    // string valor_comando = entrada.substr(entrada.find(delimiter) + delimiter.length());
 
-    //validar comando de consulta
+    while(comando != "QUIT"){
 
+        //if(isValidSentence(accion)){
 
-    // while(accion != "QUIT"){
+            //INICIANDO LA CONEXION DE FIFO
+            char respuesta[1000];
+      
+            // Abro tuberia para escribir 
+            int fifoClienteServidor = open("/tmp/clienteServidor", O_WRONLY);
+            write(fifoClienteServidor,comando.c_str(),strlen(comando.c_str())+1);
+            close(fifoClienteServidor);
 
-    //     if(isValidSentence(accion)){
+            // Abro tuberia para leer
+            fifoClienteServidor = open("/tmp/clienteServidor", O_RDONLY);
+            read(fifoClienteServidor,respuesta,sizeof(respuesta));
+            close(fifoClienteServidor);
 
-    //         //INICIANDO LA CONEXION DE FIFO
-    //         char respuesta[1000];
+            cout << "Mensaje recibido del SERVER: " << respuesta << endl;
+            //FIN DE LA CONEXION
 
-    //         int fifoClienteServidor = open("/tmp/clienteServidor", 01);
-    //         write(fifoClienteServidor,accion.c_str(),strlen(accion.c_str())+1);
-    //         close(fifoClienteServidor);
+        //} else {
+          //  cout << "Sintaxis incorrecta" << endl;
+        //}
 
-    //         fifoClienteServidor = open("/tmp/clienteServidor", 00);
-    //         read(fifoClienteServidor,respuesta,sizeof(respuesta));
-    //         close(fifoClienteServidor);
-
-    //         cout << "Mensaje recibido del SERVER: " << respuesta << endl;
-    //         //FIN DE LA CONEXION
-
-    //     } else {
-    //         cout << "Sintaxis incorrecta" << endl;
-    //     }
-
-    //     cout << "INGRESE COMANDO: ";
-    //     getline(cin, accion);
-    // }
+        cout << "INGRESE COMANDO: ";
+        getline(cin, comando);
+        // comando = entrada.substr(0, entrada.find(delimiter));
+        // valor_comando = entrada.substr(entrada.find(delimiter) + delimiter.length());
+    }
 
     return 0;
 }
