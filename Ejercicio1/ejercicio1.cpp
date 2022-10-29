@@ -1,10 +1,8 @@
 #include <iostream>
 #include <sys/wait.h>
 #include <unistd.h>
-//#include "process.h"
 
 using namespace std;
-
 
 class Process
 {
@@ -52,7 +50,7 @@ int main()
 
     if(pid > 0) { //padre
 
-        Process father(getpid(), getppid(), 1, "padre");
+        Process father(getpid(), getppid(), 1, "padre/proceso");
         father.message();
 
         pid = father.createSon();
@@ -61,7 +59,7 @@ int main()
             pid_t w = waitpid(pid, &status, WUNTRACED);
         }
         if(pid == 0) {  //hijo 2
-            Process son(getpid(), getppid(), 2, "hijo");
+            Process son(getpid(), getppid(), 2, "hijo/proceso");
             son.message();
 
             pid = son.createSon();
@@ -71,7 +69,7 @@ int main()
                 pid_t w = waitpid(pid, &status, WUNTRACED);
             }
             if(pid == 0) {
-                Process grandSon(getpid(), getppid(), 3, "nieto");
+                Process grandSon(getpid(), getppid(), 3, "nieto/proceso");
                 grandSon.message();
 
                 pid = fork();
@@ -79,12 +77,12 @@ int main()
                     int status;
                     pid_t w = waitpid(pid, &status, WUNTRACED);
                 } else {
-                    Process greatGrandSon(getpid(), getppid(), 4, "bisnieto");
+                    Process greatGrandSon(getpid(), getppid(), 4, "bisnieto/proceso");
                     greatGrandSon.message();
                 }
             }
         }
-        
+
     }
     else if (pid == 0) { //hijo 1
         pid_t p = getppid();
@@ -100,7 +98,7 @@ int main()
                     int status;
                     pid_t w = waitpid(pid, &status, WUNTRACED);
             } else if(pid == 0) {
-                Process grandSon(getpid(), getppid(), 3, "nieto");
+                Process grandSon(getpid(), getppid(), 3, "nieto/proceso");
                 grandSon.message();
 
                 pid = fork();
@@ -112,19 +110,19 @@ int main()
                         pid_t w = waitpid(pid, &status, WUNTRACED);
                     }
                     else if(pid == 0) {
-                        Process greatGrandSon(getpid(), getppid(), 4, "bisnieto1");
+                        Process greatGrandSon(getpid(), getppid(), 4, "bisnieto/proceso");
                         greatGrandSon.message();
                     }
 
                 }
                 else if(pid == 0) {
-                    Process greatGrandSon(getpid(), getppid(), 4, "bisnieto2");
+                    Process greatGrandSon(getpid(), getppid(), 4, "bisnieto/proceso");
                     greatGrandSon.message();
                 }
             }
 
         }else if(pid == 0) {
-            Process grandSon(getpid(), getppid(), 3, "nieto");
+            Process grandSon(getpid(), getppid(), 3, "nieto/proceso");
             grandSon.message();
 
             pid = fork();
@@ -132,40 +130,49 @@ int main()
                     pid = fork();
 
                     if(pid > 0) {
-                        int status;
-                        pid_t w = waitpid(pid, &status, WUNTRACED);
+                        while (true)
+                        {
+                            /* code */
+                        }
+                        
                     }
                     else if(pid == 0) {
-                        Process greatGrandSon(getpid(), getppid(), 4, "bisnieto3");
+                        Process greatGrandSon(getpid(), getppid(), 4, "bisnieto/zombie");
                         greatGrandSon.message();
+                        exit(0);
 
                     }
 
                 }
                 else if(pid == 0) {
-                    Process greatGrandSon(getpid(), getppid(), 4, "bisnieto4");
+                    Process greatGrandSon(getpid(), getppid(), 4, "bisnieto/zombie");
                     greatGrandSon.message();
 
-                        //zombie
+                    //daemon
+                   pid = fork();
+                    if(pid > 0){
+                        exit(0);
+                    }else if (pid == 0){
                         pid = fork();
                         if(pid > 0){
-                            while (1)
-                            {
-                            
-                            }
-    
-                        }
-                        else if(pid == 0){
-                            Process zombie(getpid(), getppid(), 5, "zombie");
-                            zombie.message();
-                            exit(0);
-    
+                             Process daemon(getpid(), 1, 5, "demonio");
+                            daemon.message();
+                            while (true){}
                         }
 
+                    }
                 }
-        }
 
+        }
+    
     }
-   
-    return EXIT_SUCCESS;
+
+    
+
+         while(true)
+                {
+                    /* code */
+                }  
+
+        return EXIT_SUCCESS;
 }
