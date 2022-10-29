@@ -46,7 +46,7 @@ class Process
 
 int main()
 {
-    pid_t pid;
+    pid_t pid, pidz;
 
     pid = fork();
 
@@ -71,10 +71,20 @@ int main()
                 pid_t w = waitpid(pid, &status, WUNTRACED);
             }
             if(pid == 0) {
-                 Process grandSon(getpid(), getppid(), 3, "nieto");
+                Process grandSon(getpid(), getppid(), 3, "nieto");
                 grandSon.message();
+
+                pid = fork();
+                if(pid > 0){
+                    int status;
+                    pid_t w = waitpid(pid, &status, WUNTRACED);
+                } else {
+                    Process greatGrandSon(getpid(), getppid(), 4, "bisnieto");
+                    greatGrandSon.message();
+                }
             }
         }
+        
     }
     else if (pid == 0) { //hijo 1
         pid_t p = getppid();
@@ -92,11 +102,67 @@ int main()
             } else if(pid == 0) {
                 Process grandSon(getpid(), getppid(), 3, "nieto");
                 grandSon.message();
+
+                pid = fork();
+                if(pid > 0) {
+                    pid = fork();
+
+                    if(pid > 0) {
+                        int status;
+                        pid_t w = waitpid(pid, &status, WUNTRACED);
+                    }
+                    else if(pid == 0) {
+                        Process greatGrandSon(getpid(), getppid(), 4, "bisnieto1");
+                        greatGrandSon.message();
+                    }
+
+                }
+                else if(pid == 0) {
+                    Process greatGrandSon(getpid(), getppid(), 4, "bisnieto2");
+                    greatGrandSon.message();
+                }
             }
 
         }else if(pid == 0) {
             Process grandSon(getpid(), getppid(), 3, "nieto");
             grandSon.message();
+
+            pid = fork();
+                if(pid > 0) {
+                    pid = fork();
+
+                    if(pid > 0) {
+                        int status;
+                        pid_t w = waitpid(pid, &status, WUNTRACED);
+                    }
+                    else if(pid == 0) {
+                        Process greatGrandSon(getpid(), getppid(), 4, "bisnieto3");
+                        greatGrandSon.message();
+
+                    }
+
+                }
+                else if(pid == 0) {
+                    Process greatGrandSon(getpid(), getppid(), 4, "bisnieto4");
+                    greatGrandSon.message();
+
+                        //zombie
+                        pid = fork();
+                        if(pid > 0){
+                            while (1)
+                            {
+                            
+                            }
+    
+                        }
+                        else if(pid == 0){
+                            Process zombie(getpid(), getppid(), 5, "zombie");
+                            zombie.message();
+                            exit(0);
+    
+                        }
+
+                }
         }
 
     }
