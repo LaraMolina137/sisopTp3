@@ -4,7 +4,7 @@
 #include <iterator>
 #include <fcntl.h> // para el manejo de fifo
 #include <signal.h>
-
+#include <unistd.h>
 
 using namespace std;
 
@@ -14,7 +14,8 @@ int main(int argc, char *argv[]){
 
     if (argc != 1)
     {
-        if (argc > 1) {
+        if (argc > 2) {
+            
             cout << "La cantidad de parametros es incorrecta";
             return 1;
         }
@@ -40,7 +41,7 @@ int main(int argc, char *argv[]){
     // string comando = entrada.substr(0, entrada.find(delimiter));
     // string valor_comando = entrada.substr(entrada.find(delimiter) + delimiter.length());
 
-    while(comando != "QUIT"){
+    while(true){
 
         //if(isValidSentence(accion)){
 
@@ -52,10 +53,15 @@ int main(int argc, char *argv[]){
             write(fifoClienteServidor,comando.c_str(),strlen(comando.c_str())+1);
             close(fifoClienteServidor);
 
+            if(comando == "QUIT"){
+                exit(0);
+            }
+
             // Abro tuberia para leer
             fifoClienteServidor = open("/tmp/clienteServidor", O_RDONLY);
             read(fifoClienteServidor,respuesta,sizeof(respuesta));
             close(fifoClienteServidor);
+
 
             cout << "Mensaje recibido del SERVER: " << respuesta << endl;
             //FIN DE LA CONEXION
@@ -66,8 +72,7 @@ int main(int argc, char *argv[]){
 
         cout << "INGRESE COMANDO: ";
         getline(cin, comando);
-        // comando = entrada.substr(0, entrada.find(delimiter));
-        // valor_comando = entrada.substr(entrada.find(delimiter) + delimiter.length());
+        
     }
 
     return 0;

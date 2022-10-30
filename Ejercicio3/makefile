@@ -1,5 +1,5 @@
-ejercicio3: ejercicio3.o
-		gcc -o ejercicio3 ejercicio3.o
+ejercicio3: 
+		g++ ejercicio3.cpp -o ejercicio3
 
-ejericio3.o: 
-		gcc -c ejercicio3
+servidor: 
+		g++ servidor.cpp -o servidor
