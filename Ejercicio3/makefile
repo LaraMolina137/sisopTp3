@@ -1,5 +1,7 @@
-ejercicio3: 
-		g++ ejercicio3.cpp -o ejercicio3
+all: cliente servidor
+
+cliente: 
+		g++ cliente.cpp -o cliente
 
 servidor: 
 		g++ servidor.cpp -o servidor
