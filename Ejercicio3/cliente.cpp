@@ -103,6 +103,8 @@ void help()
     cout << "\t\t Muestra ID, DESCRIPCION y PRECIO de todos los productos existentes." << endl;
     cout << "\t - QUIT" << endl;
     cout << "\t\t Finaliza la ejecucion." << endl;
+    cout << "El cliente se ejecuta de la siguiente manera:" << endl;
+    cout << "./cliente" << endl;
     cout << "---------------------------------------------------------------------------------------" << endl;
     cout << "---------------------------------------------------------------------------------------" << endl;
 }

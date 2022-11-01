@@ -55,7 +55,7 @@ string ejecutarSTOCK(string sentencia, char* nombreArchivo) {
 
     file.close();
 
-    return "No se encontro el producto" + datoId;
+    return "No se encontro el producto";
 }
 
 string ejecutarSIN_STOCK(char* nombreArchivo) {
@@ -161,34 +161,41 @@ string realizarAccion(string comando, char* nombreArchivo) {
     if(accion == "LIST") { return ejecutarLIST(nombreArchivo); }
     if(accion == "QUIT") ejecutarQUIT(); 
 
-    return "ERROR: Ha ocurrido un error inesperado, por favor intentelo mas tarde nuevamente";
+    return "Ha ocurrido un error inesperado, por favor intentelo mas tarde nuevamente";
 }
 
 void help()
 {
     cout << "------------------------------------------------------------------------" << endl;
     cout << "------------------------------------------------------------------------" << endl;
-    cout << "Servidor que recibira un comando y devolvera lo pedido del archivo" << endl;
+    cout << "Servidor que ejecuta comandos recibidos mediante un cliente" << endl;
+    cout << "Los comandos aceptados " << endl;
+    cout << "\t - STOCK producto_id" << endl;
+    cout << "\t\t Muestra DESCRIPCION y STOCK para un producto dado." << endl;
+    cout << "\t - SIN_STOCK" << endl;
+    cout << "\t\t Muestra ID, DESCRIPCION y COSTO de los productos con STOCK cero." << endl;
+    cout << "\t - REPO cantidad" << endl;
+    cout << "\t\t Muestra el costo total de reponer una cantidad dada para cada producto sin stock." << endl;
+    cout << "\t - LIST" << endl;
+    cout << "\t\t Muestra ID, DESCRIPCION y PRECIO de todos los productos existentes." << endl;
+    cout << "\t - QUIT" << endl;
+    cout << "\t\t Finaliza la ejecucion." << endl;
+    cout << "El servidor se ejecuta de la siguiente manera:" << endl;
+    cout << "./servidor NombreArchivo" << endl;
     cout << "------------------------------------------------------------------------" << endl;
 }
 
 int main(int argc, char *argv[]){
 
-    // if (argc != 1)
-    // {
-    //     if (argc > 2) {
-    //         cout << "La cantidad de parametros es incorrecta";
-    //         return 1;
-    //     }
-    //     else if (!strcmp(argv[1],"--help") || !strcmp(argv[1], "-h")) {
-    //         help();
-    //         return 0;
-    //     }
-    //     else {
-    //         cout << "El parametro ingresado es incorrecto";
-    //         return 1;
-    //     }
-    // }
+    if (argc != 2) {
+        cout << "La cantidad de parametros es incorrecta";
+        return 1;
+    }
+    else if (!strcmp(argv[1],"--help") || !strcmp(argv[1], "-h")) {
+        help();
+        return 0;
+    }
+    
 
     //Señal 
     signal( SIGUSR1 , signal_handler);
