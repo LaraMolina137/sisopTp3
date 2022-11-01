@@ -7,6 +7,15 @@
 #include <stdlib.h>
 #include <signal.h>
 
+#define OK 0
+#define ALTA 1
+#define BAJA 2
+#define CONSULTA 3
+#define ERROR_DATOS_ALTA 1
+#define ERROR_DATO_RAZA 2
+#define ERROR_DATO_SEXO 3
+#define ERROR_DATO_CASTRAR 4
+#define ERROR_NOMBRE_REPETIDO 5
 #define FALSE 0
 #define TRUE 1
 #define TAMBUF 1024
@@ -28,7 +37,7 @@ void cerrar();
 void cliente_murio(int);
 void sin_control_c(int);
 
-char *procesar_letra(char *, char *, char *, int *, int *);
+void mensaje_inicio(int);
 int levantarServidorPara1Conexion(int, int);
 void manejarServidorPara1Conexion(int);
 void cerrarSocket(int);
@@ -159,9 +168,132 @@ int aceptarConexionSocket(int sockfd)
     return fdCliente;
 }
 
-char *obtener_palabra()
+void mensaje_inicio(int fdClienteNuevo)
 {
-    printf("obtener_palabra\n");
+    int desplazamiento = 0;
+    int tam = sizeof(pidServer);
+    void *mensaje = malloc(tam);
+    memset(mensaje, 0, tam);
+    memcpy(mensaje + desplazamiento, &pidServer, sizeof(pidServer));
+    desplazamiento += sizeof(pidServer);
+    int bytesEnv = send(fdClienteNuevo, mensaje, desplazamiento, 0);
+    free(mensaje);
+}
+
+char *desserializar_recibir(int fdClienteNuevo)
+{
+    int tamEntrada = sizeof(int);
+    int respuesta = 0;
+    // ------recibo tamanio mensaje-----
+    tamEntrada = sizeof(int);
+    int tamMensaje = 0;
+    respuesta = recv(fdClienteNuevo, &tamMensaje, tamEntrada, 0);
+    // ------recibo mensaje-----
+    char *mensaje = malloc(tamMensaje + 1);
+    memset(mensaje, 0, tamMensaje + 1);
+    respuesta = recv(fdClienteNuevo, mensaje, tamMensaje, 0);
+    mensaje[tamMensaje] = '\0';
+    printf("mensaje recibida: %s\n", mensaje);
+    return mensaje;
+}
+
+char *obtener_substring(char *origen, int offset, int tam)
+{
+    char *palabra = malloc(tam + 1);
+    memset(palabra, 0, tam + 1);
+    memcpy(palabra, origen + offset, tam);
+    palabra[tam] = '\0';
+    return palabra;
+}
+
+char *obtener_dato(int tam_mje, char *entrada, int tam_offset)
+{
+    int tam_mje2 = tam_mje - tam_offset;
+    char *subtring = obtener_substring(entrada, tam_offset, tam_mje2);
+    char delimitador[] = " ";
+    char *salida = strtok(subtring, delimitador);
+    return salida;
+}
+
+int validar_datos_alta(char *entrada)
+{
+    // 1: faltan datos para el alta
+    // 2: falta dato raza para el alta
+    // 3: falta dato sexo para el alta
+    // 4: falta dato castrar para el alta
+    printf("---validar_datos_alta\n");
+    printf("---entrada: %s\n", entrada);
+    int tam_mje = strlen(entrada);
+    int tam_offset = 0;
+    char *copia = obtener_substring(entrada, tam_offset, tam_mje);
+    char *nombre = obtener_dato(tam_mje, copia, tam_offset);
+    printf("---nombre: %s\n", nombre);
+    if (nombre == NULL)
+    {
+        return ERROR_DATOS_ALTA;
+    }
+    else
+    {
+        printf("---falta validar nombre duplicado\n");
+    }
+
+    int tamNombre = strlen(nombre) + 1;
+    tam_offset += tamNombre;
+    char *raza = obtener_dato(tam_mje, copia, tam_offset);
+    printf("---raza: %s\n", raza);
+    if (raza == NULL)
+    {
+        return ERROR_DATO_RAZA;
+    }
+
+    int tamRaza = strlen(raza) + 1;
+    tam_offset += tamRaza;
+    char *sexo = obtener_dato(tam_mje, copia, tam_offset);
+    printf("---sexo: %s\n", sexo);
+    if (sexo == NULL)
+    {
+        return ERROR_DATO_SEXO;
+    }
+
+    int tamSexo = strlen(sexo) + 1;
+    tam_offset += tamSexo;
+    char *castrar = obtener_dato(tam_mje, copia, tam_offset);
+    printf("---castrar: %s", castrar);
+    if (castrar == NULL)
+    {
+        return ERROR_DATO_CASTRAR;
+    }
+    int tamCastrar = strlen(castrar);
+    printf("---fin validar_datos_alta\n");
+}
+
+void evaluo_error(valido)
+{
+    switch (valido)
+    {
+    case ERROR_DATOS_ALTA:
+        printf("---ERROR_DATOS_ALTA\n");
+        break;
+    case ERROR_DATO_RAZA:
+        printf("---ERROR_DATO_RAZA\n");
+        break;
+    case ERROR_DATO_SEXO:
+        printf("---ERROR_DATO_SEXO\n");
+        break;
+    case ERROR_DATO_CASTRAR:
+        printf("---ERROR_DATO_CASTRAR\n");
+        break;
+    case ERROR_NOMBRE_REPETIDO:
+        printf("---ERROR_NOMBRE_REPETIDO\n");
+        break;
+
+    default:
+        break;
+    }
+}
+
+int grabo_archivo(char *mensaje)
+{
     FILE *archivo;
     char *line = NULL;
 
@@ -169,152 +301,203 @@ char *obtener_palabra()
     size_t len = 0;
     ssize_t read;
 
-    archivo = fopen("palabras.txt", "r");
+    archivo = fopen("abmGatos.txt", "a");
 
-    // archivo = fopen("/home/ubuntu/Escritorio/Facultad/SO/C/ej5/palabras.txt", "r");
     if (NULL == archivo)
         exit(EXIT_FAILURE);
 
-    fseek(archivo, 0L, SEEK_END);
-    long tam = ftell(archivo);
-    rewind(archivo);
-    char *palabra[tam];
-
-    while ((read = getline(&line, &len, archivo)) != -1)
-    {
-        palabra[i] = (char *)malloc(strlen(line));
-        memset(palabra[i], 0, strlen(line));
-        memcpy(palabra[i], line, strlen(line));
-        palabra[i][strlen(line)] = '\0';
-        // strcpy(palabra[i], line);
-        i++;
-    }
-    srand(time(NULL));
-    int r = (rand() % i);
+    fprintf(archivo, mensaje);
     fclose(archivo);
-    char *palabraRetorna = (char *)malloc(strlen(palabra[r]));
-    memset(palabraRetorna, 0, strlen(palabra[r]));
-    memcpy(palabraRetorna, palabra[r], strlen(palabra[r]));
-    palabraRetorna[strlen(palabra[r])] = '\0';
-
-    // liberar espacio de palabra[i]
-    int j = 0;
-    while (j < i)
-    {
-        free(palabra[j]);
-        j++;
-    }
-    return palabraRetorna;
 }
 
-char *procesar_letra(char *resultadoLetra, char *palabra, char *letra, int *cantIntentos, int *cantAciertos)
+int trato_alta(char *mensaje)
 {
-    printf("procesar_letra\n");
-    static int pos, len;
-    pos = strcspn(palabra, letra);
-    len = strlen(palabra) - 1;
-
-    if (pos >= len)
+    int tam_mje_total = strlen(mensaje);
+    // revisar de sacar el numero 4 y obtenerlo de otra manera
+    int tam_mje = tam_mje_total - 4; // 5: "ALTA "
+    char *subcadena = obtener_substring(mensaje, 4, tam_mje);
+    int valido = validar_datos_alta(subcadena);
+    if (valido != OK)
     {
-        // la letra no está en la palabra
-        (*cantIntentos)--;
+        evaluo_error(valido);
+    }
+    // revisar que cuando graba lo hace asi " SnowBall siames M CA", sacarle el espacio adelante
+    grabo_archivo(subcadena);
+}
+
+char existeProducto(char *nombre)
+{
+    FILE *archivo;
+    char existe = 0;
+    char *linea = NULL;
+    size_t len = 0;
+    /* Abre el archivo en modo lectura */
+    archivo = fopen("abmGatos.txt", "r");
+    if (archivo != NULL)
+    {
+        getline(&linea, &len, archivo);
+        while (!feof(archivo))
+        {
+            int tam_mje = strlen(linea);
+            int tam_offset = 0;
+            char *copia = obtener_substring(linea, tam_offset, tam_mje);
+            char *campoNombre = obtener_dato(tam_mje, copia, tam_offset);
+            if (strcmp(campoNombre, nombre))
+            {
+                existe = 1;
+                break;
+            }
+            getline(&linea, &len, archivo);
+        }
+        /* Cierra el archivo */
+        fclose(archivo);
+    }
+    // existe = 1/ no existe = 0
+    return existe;
+}
+
+int eliminarProducto(char *nombre)
+{
+    FILE *archivo;
+    FILE *temporal;
+    char elimina = 0;
+    char *linea = NULL;
+    size_t len = 0;
+
+    archivo = fopen("abmGatos.txt", "r");
+    temporal = fopen("temporal.txt", "w");
+
+    if (archivo == NULL || temporal == NULL)
+    {
+        elimina = 0;
     }
     else
     {
-        for (int i = 0; i < len; i++)
+        /* Se copia en el archivo temporal los registros válidos */
+        getline(&linea, &len, archivo);
+        while (!feof(archivo))
         {
-            if (palabra[i] == *letra)
+            int tam_mje = strlen(linea);
+            int tam_offset = 0;
+            char *copia = obtener_substring(linea, tam_offset, tam_mje);
+            char *campoNombre = obtener_dato(tam_mje, copia, tam_offset);
+            int cmp = strcmp(nombre, campoNombre);
+            if (strcmp(nombre, campoNombre))
             {
-                resultadoLetra[i] = *letra;
-                (*cantAciertos)++;
+                fprintf(temporal, linea);
             }
+            getline(&linea, &len, archivo);
+        }
+        /* Se cierran los archivos antes de borrar y renombrar */
+        fclose(archivo);
+        fclose(temporal);
+
+        remove("abmGatos.txt");
+        rename("temporal.txt", "abmGatos.txt");
+
+        elimina = 1;
+    }
+    return elimina;
+}
+
+int trato_baja(char *mensaje)
+{
+    int tam_mje_total = strlen(mensaje);
+    // revisar de sacar el numero 4 y obtenerlo de otra manera
+    int tam_mje = tam_mje_total - 5; // 5: "ALTA "
+    char *nombre = obtener_substring(mensaje, 5, tam_mje);
+    nombre[strlen(nombre) - 1] = '\0';
+    // int valido = validar_datos_alta(subcadena);
+    // if (valido != OK)
+    //{
+    //     evaluo_error(valido);
+    // }
+    /* Se verifica que el gato a buscar, exista */
+    if (existeProducto(nombre))
+    {
+        if (eliminarProducto(nombre))
+        {
+            printf("\n\tProducto eliminado satisfactoriamente.\n");
+        }
+        else
+        {
+            printf("\n\tEl producto no pudo ser eliminado\n");
         }
     }
-    return resultadoLetra;
+    else
+    {
+        /* El gato no existe */
+        printf("\n\tEl gato con nombre %s no existe.\n", nombre);
+    }
+    return 1;
+}
+
+void consulta_general()
+{
+    printf("---consulta_general\n");
+}
+
+void consulta_particular()
+{
+    printf("---consulta_particular\n");
+}
+
+void trato_consulta(char *mensaje)
+{
+    // printf("---mensaje: %s\n", mensaje);
+    int tam_mje = strlen(mensaje);
+    int tam_offset = 0;
+    char *copia = obtener_substring(mensaje, tam_offset, tam_mje);
+    char *nombre = obtener_dato(tam_mje, copia, tam_offset);
+    // printf("---nombre: %s\n", nombre);
+    if (nombre == NULL)
+    {
+        consulta_general();
+    }
+    else
+    {
+        consulta_particular(nombre);
+    }
 }
 
 void atenderCliente(int fdClienteNuevo)
 {
     printf("atenderCliente\n");
     //		  asignar palabra
-    // armar mensaje cant.letras, cant intentos
-    char *palabra = obtener_palabra();
-    int cantLetras = strlen(palabra);
-    int cantIntentos = MAX_INTENTOS;
-    int cantAciertos = 0;
+    int tam = sizeof(pidServer);
     int desplazamiento = 0;
-    printf("---palabra: %s\n", palabra);
-    int tam = sizeof(pidServer) + sizeof(cantIntentos) + sizeof(cantLetras) + cantLetras;
-    char *resultadoLetra = malloc(cantLetras);
-    for (int i = 0; i < cantLetras; i++)
-    {
-        resultadoLetra[i] = '-';
-    }
-    resultadoLetra[cantLetras - 1] = '\0';
-    //		  control del juego
-    // envio longitud de palabra al cliente
-    // armo primer mensaje  ----------------------------------------------- listo
-    // estructura: cantIntentos + cantLetras + resultadoLetra
-    void *mensaje = malloc(tam);
-    memset(mensaje, 0, tam);
-    memcpy(mensaje + desplazamiento, &pidServer, sizeof(pidServer));
-    desplazamiento += sizeof(pidServer);
-    memcpy(mensaje + desplazamiento, &cantIntentos, sizeof(cantIntentos));
-    desplazamiento += sizeof(cantIntentos);
-    memcpy(mensaje + desplazamiento, &cantLetras, sizeof(cantLetras));
-    desplazamiento += sizeof(cantLetras);
-    memcpy(mensaje + desplazamiento, resultadoLetra, cantLetras);
-    desplazamiento += cantLetras;
-    int bytesEnv = send(fdClienteNuevo, mensaje, desplazamiento, 0);
-    free(mensaje);
-    //--------------------------------------------------------------------------
+    mensaje_inicio(fdClienteNuevo);
+
     int respuesta = 1;
-    while (cantIntentos > 0 && (cantLetras - 1) != cantAciertos && respuesta > 0)
+    while (TRUE)
     {
-        // espero letra
-        // int tamEntrada = sizeof(char);
-        int tamEntrada = 27;
-        char *letra = malloc(tamEntrada);
-        ;
-        respuesta = recv(fdClienteNuevo, &letra, tamEntrada, 0);
-        printf("Respuesta: %d\n", respuesta);
-        // letra = tolower(letra);
-        letra[respuesta + 1] = '\0';
-        printf("Letra recibida: %s\n", letra);
+        // ------recibo comando-----
+        int tamEntrada = sizeof(int);
+        int comando = 0;
 
-        // validar la letra recibida si acerto o no
-        resultadoLetra = procesar_letra(resultadoLetra, palabra, &letra, &cantIntentos, &cantAciertos);
+        respuesta = recv(fdClienteNuevo, &comando, tamEntrada, 0);
+        if (comando != 0)
+        {
+            char *mensaje = desserializar_recibir(fdClienteNuevo);
 
-        // armo resultado a enviar
-        //  estructura: cantIntentos + cantAciertos + cantLetras + resultadoLetra
-        desplazamiento = 0;
-        tam = sizeof(cantIntentos) + sizeof(cantAciertos) + sizeof(cantLetras) + cantLetras;
-        void *mensaje = malloc(tam);
-        memset(mensaje, 0, tam);
-        memcpy(mensaje + desplazamiento, &cantIntentos, sizeof(cantIntentos));
-        desplazamiento += sizeof(cantIntentos);
-        memcpy(mensaje + desplazamiento, &cantAciertos, sizeof(cantAciertos));
-        desplazamiento += sizeof(cantAciertos);
-        memcpy(mensaje + desplazamiento, &cantLetras, sizeof(cantLetras));
-        desplazamiento += sizeof(cantLetras);
-        memcpy(mensaje + desplazamiento, resultadoLetra, cantLetras);
-        desplazamiento += cantLetras;
-        int bytesEnv = send(fdClienteNuevo, mensaje, desplazamiento, 0);
-        free(mensaje);
-    }
-
-    if (cantIntentos == 0)
-    {
-        tam = sizeof(cantLetras) + cantLetras;
-        desplazamiento = 0;
-        void *mensaje = malloc(tam);
-        memset(mensaje, 0, tam);
-        memcpy(mensaje + desplazamiento, &cantLetras, sizeof(cantLetras));
-        desplazamiento += sizeof(cantLetras);
-        memcpy(mensaje + desplazamiento, palabra, cantLetras);
-        desplazamiento += cantLetras;
-        send(fdClienteNuevo, mensaje, desplazamiento, 0);
-        free(mensaje);
+            switch (comando)
+            {
+            case ALTA:
+                printf("-----ENTRO POR ALTA\n");
+                trato_alta(mensaje);
+                break;
+            case BAJA:
+                printf("-----ENTRO POR BAJA\n");
+                trato_baja(mensaje);
+                break;
+            case CONSULTA:
+                printf("-----ENTRO POR CONSULTA\n");
+                trato_consulta(mensaje);
+                break;
+            default:
+                break;
+            }
+        }
     }
 }
 
@@ -382,8 +565,18 @@ void cerrar()
 void ayuda()
 {
     printf("\n********************************AYUDA******************************\n");
-    printf("Juego del ahorcado (Hangman) \n");
-    printf("Se genera una comunicación cliente-servidor mediante socket.\n");
+    printf("Refugio de gatos \n");
+    printf("Se lleva un registro mínimo de los ingresos (rescates) y los egresos (adopciones)\n");
+    printf("Se puede tomar los siguientes comandos: \n");
+    printf("ALTA: Datos a ingresar: nombre, raza, sexo (M-H), CA (castrado)/SC(sin castrar)\n");
+    printf("Por ejemplo: ALTA SnowBall siamés M CA\n");
+    printf("BAJA: Datos a ingresar: nombre\n");
+    printf("Por ejemplo: BAJA SnowBall\n");
+    printf("CONSULTA: Datos opcional: nombre, si no se ingresa muestra todos los gatos rescatados.\n");
+    printf("Por ejemplo: CONSULTA SnowBall\n");
+    printf("             CONSULTA\n");
+    printf("La salida por pantalla en el cliente serían todos los datos de cada gato.\n");
+    printf("          \n");
     printf("El servidor debe recibir como parámetro el puerto que escuchara y el\n");
     printf("cliente recibirá la IP y puerto del servidor a donde deberá conectarse.\n");
     printf("Se debe ejecutar primero el servidor y a continuacion el cliente podra\n");

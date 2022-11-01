@@ -8,6 +8,8 @@
 #include <stdlib.h>
 #include <signal.h>
 
+#define TRUE 1
+#define TAM_ENTRADA 50
 #define TAMBUF 1024
 //#define PUERTO 5001
 #define MEM_SIZE 1024
@@ -27,8 +29,9 @@ void ayuda();
 void salir(int);
 int conectarCliente(const char *, int);
 
-void *iniciarJuego(int);
-void jugar(int, struct formato *);
+void iniciar_abm(int);
+void serializar_enviar(int, int, char *);
+void abm_gatos(int);
 void cerrarSocket(int);
 
 int main(int argc, const char *argv[])
@@ -39,12 +42,12 @@ int main(int argc, const char *argv[])
 			SIGINT: finalizar el juego avisando al servidor
 		conectar con el servidor
 		iniciar el juego
-		jugar */
+		abm_gatos */
 
 	// Conectar cliente con el servidor
 	signal(SIGINT, salir);
 
-	if (argc == 3)
+	if (argc == 2)
 	{
 		if (strcmp(argv[1], "-help") == 0 || strcmp(argv[1], "-h") == 0 || strcmp(argv[1], "-?") == 0)
 		{
@@ -59,15 +62,14 @@ int main(int argc, const char *argv[])
 	}
 
 	PUERTO = strtol(argv[1], NULL, 10);
-	printf("entrada: %d\n", PUERTO);
+	printf("puerto: %d\n", PUERTO);
 	IPDESTINO = argv[2];
-	printf("entrada: %d\n", IPDESTINO);
+	printf("ipdestino: %s\n", IPDESTINO);
 
 	int socketServidor = conectarCliente(IPDESTINO, PUERTO);
 
-	struct formato *controlJuego = (struct formato *)iniciarJuego(socketServidor);
-
-	jugar(socketServidor, controlJuego);
+	iniciar_abm(socketServidor);
+	abm_gatos(socketServidor);
 
 	cerrarSocket(socketServidor);
 
@@ -117,62 +119,78 @@ int conectarCliente(const char *ipDestino, int puerto)
 	return socket;
 }
 
-void *iniciarJuego(int sockfd)
+void iniciar_abm(int sockfd)
 {
-	// Primer mensaje para comenzar el juego
-	struct formato *controlJuego = malloc(sizeof(struct formato));
+	// Primer mensaje para comenzar
 	// se recibe respuesta del servidor
-	// estructura del recv: pidServer + intentos + acertados + tamPalabra + palabraAdivinar
+	// estructura del recv: pidServer
 	recv(sockfd, &pidServer, sizeof(pidServer), 0);
 
-	int cantIntentos = 0;
-	recv(sockfd, &cantIntentos, sizeof(cantIntentos), 0);
-
-	int tamPalabra = 0;
-	recv(sockfd, &tamPalabra, sizeof(tamPalabra), 0);
-
-	char *palabraAdivinar = malloc(tamPalabra);
-	recv(sockfd, palabraAdivinar, tamPalabra, 0);
-
-	controlJuego->forCantLetras = tamPalabra - 1;
-	controlJuego->forCantIntentos = cantIntentos;
 	printf("pidServer: %d\n", pidServer);
-	printf("Comienza el juego HANGMAN\n");
-	printf("Palabra a adivinar: %s\t\t", palabraAdivinar);
-	printf("Cantidad de intentos: %d\n", controlJuego->forCantIntentos);
+	printf("ABM - Refugio de Gatos\n");
 
-	free(palabraAdivinar);
-
-	return controlJuego;
+	return;
 }
 
-void jugar(int socketServidor, struct formato *controlJuego)
+void serializar_enviar(int socketServidor, int comando, char *cadena)
+{
+	// printf("sole - funcion serializar_enviar\n");
+	int tamCadena = strlen(cadena) + 1;
+	// estructura: comando + nombre + raza + sexo(M-H) + CA(castrado)/SC(sin castrar)
+	// estructura: ALTA SnowBall siames M CA
+	// estructura send: int (comando) + int (long cadena) +  mensaje
+	int desplazamiento = 0;
+	int tamMensaje = sizeof(comando) + sizeof(tamCadena) + tamCadena;
+	void *mensaje = malloc(tamMensaje);
+	memset(mensaje, 0, tamMensaje);
+	memcpy(mensaje + desplazamiento, &comando, sizeof(comando));
+	desplazamiento += sizeof(comando);
+	memcpy(mensaje + desplazamiento, &tamCadena, sizeof(tamCadena));
+	desplazamiento += sizeof(tamCadena);
+	memcpy(mensaje + desplazamiento, cadena, tamCadena);
+	desplazamiento += tamCadena;
+
+	int bytesEnv = send(socketServidor, mensaje, desplazamiento, 0);
+	free(mensaje);
+	// printf("sole - bytesEnv: %d\n", bytesEnv);
+	// printf("sole - funcion serializar_enviar fin\n");
+}
+
+void abm_gatos(int socketServidor)
 {
 	// ciclo
-	// ingresa letra
-	// validar que sea letra valida
+	// ingresa comando
+	// validar que sea comando valido
 	//   convierto a mayuscula
-	//     - si ok: envio la letra al servidor
-	//     - si not ok: solicito nueva letra
-	// recibe estado de la palabra
+	//     - si ok: envio el comando al servidor
+	//     - si not ok: solicito nuevo comando
+	// recibe estado de la operacion
 
-	printf("\nfuncion jugar-------------\n ");
-	int tamEntrada = sizeof(char); // + sizeof(char) + sizeof(char) + sizeof(char) + sizeof(char);
-	char *letra = malloc(tamEntrada);
+	char *letra = malloc(TAM_ENTRADA);
 
-	while (controlJuego->forCantIntentos > 0 && controlJuego->forCantLetras != controlJuego->forCantAciertos)
+	while (TRUE)
 	{
 		// se recibe y envia mensaje al servidor
 		printf("\nIngrese comando: ");
 		fgets(letra, 40, stdin); // Leyendo el comando ingresado
-		printf("sole - letra: %s", letra);
-		printf("sole - tamLetra: %d\n", strlen(letra));
-		char *cadena = malloc(tamEntrada);
-		strcpy(cadena, letra); // hago copia
-		char delimitador[] = " ";
-		char *comando = strtok(letra, delimitador);
-		int tamComando = strlen(comando);
+		int tamLetra = strlen(letra);
+		letra[tamLetra] = '\0';
 
+		int tam_mje_total = strlen(letra);
+
+		char *cadena = malloc(tam_mje_total + 1);
+		memset(cadena, 0, tam_mje_total + 1);
+		memcpy(cadena, letra + 0, tam_mje_total);
+		cadena[tam_mje_total] = '\0';
+
+		char delimitador[] = " ";
+		char *comando = strtok(cadena, delimitador);
+
+		int tamComando = strlen(comando);
+		comando[tamComando] = '\0';
+		tamComando = strlen(comando);
+
+		// Valido comando ingresado
 		while (strcmp(comando, "ALTA") != 0 && strcmp(comando, "BAJA") != 0 && strcmp(comando, "CONSULTA") != 0)
 		{
 			printf("Comando invalido. Debe ingresar un comando: ");
@@ -183,67 +201,26 @@ void jugar(int socketServidor, struct formato *controlJuego)
 
 		if (!strcmp(comando, "ALTA"))
 		{
-			printf("sole - son iguales alta - %s\n", comando);
-			printf("sole - cadena: %s\n", cadena);
-			int tam = strlen(cadena);
-			cadena[tam + 1] = '\0';
-			// estructura: comando + nombre + raza + sexo(M-H) + CA(castrado)/SC(sin castrar)
-			// estructura: ALTA SnowBall siamés M CA
-			int bytesEnv = send(socketServidor, cadena, strlen(cadena), 0);
-			// int bytesEnv = send(socketServidor, cadena, 40, 0);
-			printf("sole - cadena: %d\n", bytesEnv);
-			printf("sole - fin alta\n");
+			int comandoNum = 1;
+			serializar_enviar(socketServidor, comandoNum, letra);
+			// recibo respuesta alta ok o nok
+			// si nok evaluar errores e informar
 		}
 		if (!strcmp(comando, "BAJA"))
 		{
-			printf("sole - son iguales baja - %s\n", comando);
+			int comandoNum = 2;
+			serializar_enviar(socketServidor, comandoNum, letra);
+			// recibo respuesta baja ok o nok
+			// si nok evaluar errores e informar
 		}
 		if (!strcmp(comando, "CONSULTA"))
 		{
-			printf("sole - son iguales consulta - %s\n", comando);
+			int comandoNum = 3;
+			// printf("sole - son iguales consulta - %s\n", letra);
+			serializar_enviar(socketServidor, comandoNum, letra);
+			// recibo respuesta consulta ok o nok
+			// si nok evaluar errores e informar
 		}
-
-		// se recibe respuesta del servidor
-		// estructura: intentos + acertados + tamPalabra + palabraAdivinar
-		// int cantIntentos = 0;
-		// recv(socketServidor, &cantIntentos, sizeof(cantIntentos), 0);
-
-		// int cantAciertos = 0;
-		// recv(socketServidor, &cantAciertos, sizeof(cantAciertos), 0);
-
-		// int tamPalabra = 0;
-		// recv(socketServidor, &tamPalabra, sizeof(tamPalabra), 0);
-
-		// char *palabraAdivinar = malloc(tamPalabra);
-		// recv(socketServidor, palabraAdivinar, tamPalabra, 0);
-
-		// if (controlJuego->forCantIntentos == cantIntentos)
-		//{
-		//	printf("Letra acertada\n");
-		// }
-		// else
-		//	printf("Letra erronea\n");
-
-		// printf("\nPalabra a adivinar: %s\t\t", palabraAdivinar);
-		// printf("Cantidad de intentos: %d\n", cantIntentos);
-		// controlJuego->forCantIntentos = cantIntentos;
-		// controlJuego->forCantAciertos = cantAciertos;
-		// free(palabraAdivinar);
-	}
-
-	if (controlJuego->forCantIntentos > 0)
-	{
-		printf("FIN DEL JUEGO: GANASTE!!\n\n");
-	}
-	else
-	{
-		int tamPalabra = 0;
-		recv(socketServidor, &tamPalabra, sizeof(tamPalabra), 0);
-
-		char *palabraAdivinar = malloc(tamPalabra);
-		recv(socketServidor, palabraAdivinar, tamPalabra, 0);
-		printf("\nFIN DEL JUEGO: PERDISTE!!\t");
-		printf("La palabra era: %s\n", palabraAdivinar);
 	}
 	free(letra);
 }
@@ -274,8 +251,18 @@ void salir(int s)
 void ayuda()
 {
 	printf("\n********************************AYUDA******************************\n");
-	printf("Juego del ahorcado (Hangman) \n");
-	printf("Se genera una comunicación cliente-servidor mediante socket.\n");
+	printf("Refugio de gatos \n");
+	printf("Se lleva un registro mínimo de los ingresos (rescates) y los egresos (adopciones)\n");
+	printf("Se puede tomar los siguientes comandos: \n");
+	printf("ALTA: Datos a ingresar: nombre, raza, sexo (M-H), CA (castrado)/SC(sin castrar)\n");
+	printf("Por ejemplo: ALTA SnowBall siamés M CA\n");
+	printf("BAJA: Datos a ingresar: nombre\n");
+	printf("Por ejemplo: BAJA SnowBall\n");
+	printf("CONSULTA: Datos opcional: nombre, si no se ingresa muestra todos los gatos rescatados.\n");
+	printf("Por ejemplo: CONSULTA SnowBall\n");
+	printf("             CONSULTA\n");
+	printf("La salida por pantalla en el cliente serían todos los datos de cada gato.\n");
+	printf("          \n");
 	printf("El servidor debe recibir como parámetro el puerto que escuchara y el\n");
 	printf("cliente recibirá la IP y puerto del servidor a donde deberá conectarse.\n");
 	printf("Se debe ejecutar primero el servidor y a continuacion el cliente podra\n");
