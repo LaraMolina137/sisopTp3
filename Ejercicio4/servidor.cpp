@@ -12,6 +12,9 @@
 #include <semaphore.h>
 #include <sys/stat.h>
 #include <cstring>
+#include <csignal>
+#include <syslog.h>
+#include <unistd.h>
 
 using namespace std;
 
@@ -29,6 +32,13 @@ using namespace std;
 #define keyRespBaja "/tmp/ejercicio4ditommasorespbaja"
 #define keyRespConsulta "/tmp/ejercicio4ditommasorespconsulta"
 
+
+#define ISRUNNING "\
+#/bin/bash \n\
+ val=$(ps -ef | grep serverdito4 | wc -l) \n\
+ return $val \n\
+"
+
 sem_t *mutexBaja, *mutexAlta, *mutexConsulta, *mutexRespBaja, *mutexRespAlta, *mutexRespConsulta;
 
 struct gato
@@ -36,7 +46,7 @@ struct gato
     char nombre[20];
     char raza[20];
     char sexo;
-    bool castrado;
+    char castrado[2];
 };
 
 template <typename T>
@@ -55,12 +65,78 @@ void detachAndDestroy(T toDetach, int toDestroy)
     }
 }
 
-sem_t *openSem(const char *semName);
+void signalHandler( int signum ) {  
+   if(signum == SIGUSR1){
+     exit(signum);  
+   }
+}
+
+sem_t *openSem(const char *semName,int value);
 int getSharedMemorySegmentId(const char *keyName, int size, int mode);
-// void detachAndDestroy(char* toDetach,int toDestroy);
+
+
+
+void makeDaemon(){
+     /////////////////////////////////////////////////////////////////////////////////
+     pid_t pid;
+
+    /* Fork off the parent process */
+    pid = fork();
+
+    /* An error occurred */
+    if (pid < 0)
+        exit(EXIT_FAILURE);
+
+    /* Success: Let the parent terminate */
+    if (pid > 0)
+        exit(EXIT_SUCCESS);
+
+    /* On success: The child process becomes session leader */
+    if (setsid() < 0)
+        exit(EXIT_FAILURE);
+
+    /* Catch, ignore and handle signals */
+    //TODO: Implement a working signal handler */
+    signal(SIGINT, signalHandler);  
+    signal(SIGUSR1,signalHandler);
+
+    /* Fork off for the second time*/
+    pid = fork();
+
+    /* An error occurred */
+    if (pid < 0)
+        exit(EXIT_FAILURE);
+
+    /* Success: Let the parent terminate */
+    if (pid > 0)
+        exit(EXIT_SUCCESS);
+
+    /* Set new file permissions */
+    umask(0);
+
+    /* Change the working directory to the root directory */
+    /* or another appropriated directory */
+    chdir("/tmp");
+
+    /* Close all open file descriptors */
+    int x;
+    for (x = sysconf(_SC_OPEN_MAX); x>=0; x--)
+    {
+        close (x);
+    }
+
+    /* Open the log file */
+    //openlog ("firstdaemon", LOG_PID, LOG_DAEMON);
+
+}
 
 int main(int argc, const char *argv[])
-{
+{   
+    if(system(ISRUNNING) >= 2){
+        cout << "Ya hay una instancia en ejecucion" << endl;
+        exit(EXIT_FAILURE);
+    }
+    makeDaemon();
     mutexBaja = sem_open(SEM_BAJA, O_CREAT, 0644, 1);
     sem_destroy(mutexBaja);
     while (true)
@@ -68,60 +144,66 @@ int main(int argc, const char *argv[])
         // ALTA
 
         int shmidA = -1, shmidB = -1, shmidC = -1;
-        // ftok to generate unique key
-
-        if ((mutexAlta = sem_open(SEM_BAJA, O_CREAT, 0644, 1)) == SEM_FAILED)
-        {
-            perror("sem_open");
-        }
+        mutexAlta = openSem(SEM_ALTA,1);
         sem_wait(mutexAlta);
-        key_t key;
-
-        if (-1 != open(keyAlta, O_CREAT, 0777))
+        mutexRespAlta = openSem(SEM_RESP_ALTA,0);
+        shmidA = getSharedMemorySegmentId(keyAlta,sizeof(struct gato),0644);
+        if (shmidA != -1)
         {
-            key = ftok(keyAlta, 0);
-        }
-        else
-        {
-            perror("open");
-        }
-        // shmget returns an identifier in shmid
-        struct gato *str;
-        if ((shmidA = shmget(key, sizeof(struct gato), 0644)) == -1)
-        {
-            perror("shmget");
-        }
-        else
-        {
-            // shmat to attach to shared memory
-            cout << shmidA << endl;
-            str = (gato *)shmat(shmidA, (void *)0, 0);
+            gato* str = (gato *)shmat(shmidA, (void *)0, 0);
             if (str == (gato *)(-1))
             {
                 perror("shmat");
             }
-            cout << "sexo:  " << str->sexo << endl;
-            cout << "castrado:  " << str->castrado << endl;
-            cout << "nombre:  " << str->nombre << endl;
-            cout << "raza:  " << str->raza << endl
-                 << std::flush;
+            
+            int shmidRespA = getSharedMemorySegmentId(keyRespAlta,1024,0644 | IPC_CREAT);
+            char* respAlta = (char*) shmat(shmidRespA,(void * )0,0);
 
-            ofstream outfile;
+            string line;
+            ifstream iFile;
+            unsigned int foundit = 0;
 
-            outfile.open("dbgatitos.txt", ios::out | ios::app);
+            iFile.open("dbgatitos.txt");
+            while (foundit == 0 && getline(iFile, line))
+            {
+                string tofind = str->nombre;
+                if (line.find(tofind + ",", 0) != string::npos)
+                {
+                    foundit = 1;
+                }
+            }
+            iFile.close();
+            if (foundit == 1)
+            {
+                strcpy(respAlta, "Ya existe el gatito");
+            }else{
+                cout << "sexo:  " << str->sexo << endl;
+                cout << "castrado:  " << str->castrado << endl;
+                cout << "nombre:  " << str->nombre << endl;
+                cout << "raza:  " << str->raza << endl
+                    << std::flush;
+                ofstream outfile;
 
-            outfile << str->nombre << "," << str->raza << "," << str->sexo << "," << str->castrado << ";" << endl;
-            outfile.flush();
-            outfile.close();
+                outfile.open("dbgatitos.txt", ios::out | ios::app);
+
+                outfile << str->nombre << "," << str->raza << "," << str->sexo << "," << str->castrado << ";" << endl;
+
+                outfile.flush();
+                outfile.close();
+            }
             detachAndDestroy<gato *>(str, shmidA);
-            // detach from shared memory
+            if (shmdt(respAlta) == -1)
+            {
+                perror("shmdt");
+            }
+            sem_post(mutexRespAlta);
         }
         sem_post(mutexAlta);
 
         ///////// BAJA ///////////////
         key_t keyB;
         char *nombreGato;
-        mutexBaja = openSem(SEM_BAJA);
+        mutexBaja = openSem(SEM_BAJA,1);
         sem_wait(mutexBaja);
         shmidB = getSharedMemorySegmentId(keyBaja, 1024, 0644);
 
@@ -161,7 +243,7 @@ int main(int argc, const char *argv[])
                 outfile.close();
                 remove("dbgatitos.txt");
                 rename("dbgatitostmp.txt", "dbgatitos.txt");
-                mutexRespBaja = openSem(SEM_RESP_BAJA);
+                mutexRespBaja = openSem(SEM_RESP_BAJA,1);
                 int shmidRespB = getSharedMemorySegmentId(keyRespBaja, 1024, 0644);
                 char *respBaja = (char *)shmat(shmidRespB, (void *)0, 0);
                 if (respBaja == (char *)(-1))
@@ -186,7 +268,7 @@ int main(int argc, const char *argv[])
 
         key_t keyC;
         char *consulta;
-        mutexConsulta = openSem(SEM_CONSULTA);
+        mutexConsulta = openSem(SEM_CONSULTA,1);
         sem_wait(mutexConsulta);
         shmidC = getSharedMemorySegmentId(keyConsulta, 1024, 0644);
         if (shmidC != -1)
@@ -199,7 +281,7 @@ int main(int argc, const char *argv[])
             }
             key_t keyRespCons;
             char *respConsulta;
-            mutexRespConsulta = openSem(SEM_RESP_CONSULTA);
+            mutexRespConsulta = openSem(SEM_RESP_CONSULTA,1);
             int shmidRespC = getSharedMemorySegmentId(keyRespConsulta, 1024, 0644 | IPC_CREAT);
             if (shmidRespC != -1)
             {
@@ -256,10 +338,10 @@ int main(int argc, const char *argv[])
     return EXIT_SUCCESS;
 }
 
-sem_t *openSem(const char *semName)
+sem_t *openSem(const char *semName,int value)
 {
     sem_t *mutex;
-    if ((mutex = sem_open(semName, O_CREAT, 0644, 1)) == SEM_FAILED)
+    if ((mutex = sem_open(semName, O_CREAT, 0644, value)) == SEM_FAILED)
     {
         perror("sem_open");
         return NULL;

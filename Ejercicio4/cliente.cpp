@@ -18,7 +18,7 @@ struct gato
     char nombre[20];
     char raza[20];
     char sexo;
-    bool castrado;
+    char castrado[2];
 };
 
 #define SEM_ALTA "/semaltaditommaso"
@@ -37,16 +37,19 @@ struct gato
 
 sem_t *mutex_baja, *mutexAlta, *mutexConsulta, *mutexRespBaja, *mutexRespAlta, *mutexRespConsulta;
 
-sem_t* openSem(const char* semName,int value);
-int getSharedMemorySegmentId(const char* keyName,int size,int mode);
-void deleteCat(char* nombreGato);
-void consultar(char* nombreGato);
+sem_t *openSem(const char *semName, int value);
+int getSharedMemorySegmentId(const char *keyName, int size, int mode);
+void deleteCat(char *nombreGato);
+void consultar(char *nombreGato);
 void recibirRespuestaBaja();
 void recibirRespuestaConsulta();
 
-string help()
+void help()
 {
-    return "Ejecutelo de la siguiente manera: ./ejercicio4 ";
+    cout << "Hay 3 formas de ejecucion " << endl;
+    cout << "./ejercicio4 ALTA [nombreGato] [razaGato] [sexo(H|M)] [castrado(CA)|sinCastrar(SC)]" << endl;
+    cout << "./ejercicio4 BAJA [nombreGato]" << endl;
+    cout << "./ejercicio4 CONSULTA [nombreGato(OPCIONAL)]" << endl;
 }
 
 int main(int argc, char *argv[])
@@ -62,8 +65,8 @@ int main(int argc, char *argv[])
         if (argc == 2)
         {
             if (par1.compare("-h") == 0)
-            {
-                cout << help() << endl;
+            {   
+                help();
                 return EXIT_SUCCESS;
             }
             else
@@ -84,13 +87,24 @@ int main(int argc, char *argv[])
             }
         }
         if (par1.compare("ALTA") == 0)
-        {
+        {   
+            string sexo = argv[4];
+            if(sexo.compare("M") != 0 && sexo.compare("H") != 0){
+                cout << "Parametros incorrectos.Utilice -h para conocer el funcionamiento" << endl;
+                exit(1);
+            }
+            string castrado = argv[5];
+            if(castrado.compare("CA") != 0 && castrado.compare("SC") != 0){
+                cout << "Parametros incorrectos.Utilice -h para conocer el funcionamiento" << endl;
+                exit(1);
+            }
             struct gato *str;
             key_t key;
-            mutexAlta = openSem(SEM_ALTA,1);
+            mutexAlta = openSem(SEM_ALTA, 1);
             sem_wait(mutexAlta);
-            int shmid = getSharedMemorySegmentId(keyAlta,sizeof(struct gato),0644 | IPC_CREAT);
-            if(shmid != -1){
+            int shmid = getSharedMemorySegmentId(keyAlta, sizeof(struct gato), 0644 | IPC_CREAT);
+            if (shmid != -1)
+            {
                 str = (gato *)shmat(shmid, (void *)0, 0);
                 if (str == (gato *)(-1))
                 {
@@ -101,7 +115,7 @@ int main(int argc, char *argv[])
                 strcpy(str->nombre, argv[2]);
                 strcpy(str->raza, argv[3]);
                 str->sexo = argv[4][0];
-                str->castrado = argv[5];
+                strcpy(str->castrado,argv[5]);
 
                 // detach from shared memory
                 if (shmdt(str) == -1)
@@ -109,14 +123,28 @@ int main(int argc, char *argv[])
                     perror("shmdt");
                     exit(1);
                 }
-            }  
+            }
             sem_post(mutexAlta);
+            mutexRespAlta = openSem(SEM_RESP_ALTA, 0);
+            sem_wait(mutexRespAlta);
+            int shmidRespA = getSharedMemorySegmentId(keyRespAlta, 1024, 0644);
+            char *respAlta = (char *)shmat(shmidRespA, (void *)0, 0);
+            cout << respAlta << endl;
+            if (shmdt(respAlta) == -1)
+            {
+                perror("shmdt");
+            }
+            // destroy the shared memory
+            if (shmctl(shmidRespA, IPC_RMID, NULL) == -1)
+            {
+                perror("shmctl");
+            }
         }
         else if (par1.compare("BAJA") == 0)
         {
             key_t keyB;
             int shmidB;
-            mutex_baja = openSem(SEM_BAJA,1);
+            mutex_baja = openSem(SEM_BAJA, 1);
             sem_wait(mutex_baja);
             deleteCat(argv[2]);
             sem_post(mutex_baja);
@@ -124,11 +152,11 @@ int main(int argc, char *argv[])
         }
         else if (par1.compare("CONSULTA") == 0)
         {
-            mutexConsulta = openSem(SEM_CONSULTA,1);
+            mutexConsulta = openSem(SEM_CONSULTA, 1);
             sem_wait(mutexConsulta);
             consultar(argv[2]);
             sem_post(mutexConsulta);
-            mutexRespConsulta = openSem(SEM_RESP_CONSULTA,0);
+            mutexRespConsulta = openSem(SEM_RESP_CONSULTA, 0);
             sem_wait(mutexRespConsulta);
             recibirRespuestaConsulta();
             sem_post(mutexRespConsulta);
@@ -138,18 +166,19 @@ int main(int argc, char *argv[])
     return EXIT_SUCCESS;
 }
 
-sem_t* openSem(const char *semName,int value)
+sem_t *openSem(const char *semName, int value)
 {
     sem_t *mutex;
     if ((mutex = sem_open(semName, O_CREAT, 0644, value)) == SEM_FAILED)
-    {   
+    {
         perror("sem_open");
         exit(1);
     }
     return mutex;
 }
 
-int getSharedMemorySegmentId(const char* keyName,int size,int mode){
+int getSharedMemorySegmentId(const char *keyName, int size, int mode)
+{
     int shmid;
     key_t key;
     if (-1 != open(keyName, 0100, 0777))
@@ -170,9 +199,9 @@ int getSharedMemorySegmentId(const char* keyName,int size,int mode){
 }
 
 void deleteCat(char *nombreGato)
-{   
+{
     cout << "Iniciando baja" << endl;
-    int shmidB = getSharedMemorySegmentId(keyBaja,1024,0644 | IPC_CREAT);
+    int shmidB = getSharedMemorySegmentId(keyBaja, 1024, 0644 | IPC_CREAT);
     char *str = (char *)shmat(shmidB, (void *)0, 0);
     if (str == (char *)(-1))
     {
@@ -183,11 +212,11 @@ void deleteCat(char *nombreGato)
 }
 
 void recibirRespuestaBaja()
-{   
+{
     cout << "Esperando respuesta" << endl;
-    mutexRespBaja = openSem(SEM_RESP_BAJA,0);
+    mutexRespBaja = openSem(SEM_RESP_BAJA, 0);
     sem_wait(mutexRespBaja);
-    int shmid = getSharedMemorySegmentId(keyRespBaja,1024,0644);
+    int shmid = getSharedMemorySegmentId(keyRespBaja, 1024, 0644);
 
     char *str = (char *)shmat(shmid, (void *)0, 0);
     if (str == (char *)(-1))
@@ -199,27 +228,31 @@ void recibirRespuestaBaja()
     sem_post(mutex_baja);
 }
 
-void consultar(char* nombreGato){
-    int shmidB = getSharedMemorySegmentId(keyConsulta,1024,0644 | IPC_CREAT);
+void consultar(char *nombreGato)
+{
+    int shmidB = getSharedMemorySegmentId(keyConsulta, 1024, 0644 | IPC_CREAT);
     char *str = (char *)shmat(shmidB, (void *)0, 0);
     if (str == (char *)(-1))
     {
         perror("shmat");
         exit(1);
     }
-    if(nombreGato != NULL){
-        strcpy(str,nombreGato);
-    }else{
-        strcpy(str,"NOSEPASONOMBRE");
+    if (nombreGato != NULL)
+    {
+        strcpy(str, nombreGato);
     }
-    cout << "BUSCANDO: " <<  str << endl;
+    else
+    {
+        strcpy(str, "NOSEPASONOMBRE");
+    }
+    cout << "BUSCANDO: " << str << endl;
 }
 
 void recibirRespuestaConsulta()
-{   
-    mutexRespConsulta = openSem(SEM_RESP_CONSULTA,0);
+{
+    mutexRespConsulta = openSem(SEM_RESP_CONSULTA, 0);
     sem_wait(mutexRespConsulta);
-    int shmid = getSharedMemorySegmentId(keyRespConsulta,1024,0644 | IPC_CREAT);
+    int shmid = getSharedMemorySegmentId(keyRespConsulta, 1024, 0644 | IPC_CREAT);
 
     char *str = (char *)shmat(shmid, (void *)0, 0);
     if (str == (char *)(-1))
@@ -227,10 +260,11 @@ void recibirRespuestaConsulta()
         perror("shmat");
         exit(1);
     }
-    char* ptr = strtok(str,";");
-    while ( ptr != NULL){
+    char *ptr = strtok(str, ";");
+    while (ptr != NULL)
+    {
         cout << ptr << endl;
-        ptr = strtok(NULL,";");
+        ptr = strtok(NULL, ";");
     }
     if (shmdt(str) == -1)
     {
