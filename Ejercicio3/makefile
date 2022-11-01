@@ -1,7 +1,11 @@
 all: cliente servidor
 
 cliente: 
-		g++ cliente.cpp -o cliente
+	g++ -o  cliente cliente.cpp
 
 servidor: 
-		g++ servidor.cpp -o servidor
+	g++ -o servidor servidor.cpp
+
+clean:
+	rm -f cliente
+	rm -f servidor

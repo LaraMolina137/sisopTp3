@@ -192,11 +192,13 @@ int main(int argc, char *argv[]){
 
     //Señal 
     signal( SIGUSR1 , signal_handler);
+    //signal(SIGINT, signal_callback_handler);
     //crea otra tuberia con el mismo nombre que la del cliente
     mkfifo("/tmp/clienteServidor",0666);
 
     char* nombreArchivo = argv[1];
 
+    signal(SIGINT, SIG_IGN);
     while (1) {
         char contenido[1024];
 

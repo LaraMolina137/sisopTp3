@@ -9,8 +9,7 @@
 using namespace std;
 
 bool isValidSTOCK (string sentencia){
-
-    string delimiter = " ";
+   /* string delimiter = " ";
     string dato = sentencia.substr(sentencia.find(delimiter) + delimiter.length());
 
     cout << dato ;
@@ -18,56 +17,58 @@ bool isValidSTOCK (string sentencia){
     if(dato.empty()){ //Si esta vacio necesita el dato
         return false;
     }
-                                                                    
+             */                                                       
     return true;
 }
 
 bool isValidSIN_STOCK (string sentencia){
 
-    string delimiter = " ";
+   /* string delimiter = " ";
     string dato = sentencia.substr(sentencia.find(delimiter) + delimiter.length());
 
     if(dato.empty()){ //Si esta vacio necesita el dato
         return true;
     }
-                                                                    
-    return false;
+          */                                                         
+    return true;
 }
 
 bool isValidREPO (string sentencia){
 
-    string delimiter = " ";
+   /* string delimiter = " ";
     string dato = sentencia.substr(sentencia.find(delimiter) + delimiter.length());
 
     if(dato.empty()){ //Si esta vacio necesita el dato
         return false;
-    }
+    }*/
                                                                     
     return true;
 }
 
 bool isValidLIST (string sentencia){
 
-    string delimiter = " ";
+ /*   string delimiter = " ";
     string dato = sentencia.substr(sentencia.find(delimiter) + delimiter.length());
 
     if(dato.empty()){ //Si esta vacio necesita el dato
         return true;
     }
                                                                     
-    return false;
+    return false;*/
+
+    return true;
 }
 
 bool isValidQUIT (string sentencia){
 
-    string delimiter = " ";
+   /* string delimiter = " ";
     string dato = sentencia.substr(sentencia.find(delimiter) + delimiter.length());
 
     if(dato.empty()){ //Si esta vacio necesita el dato
         return true;
     }
-                                                                    
-    return false;
+          */                                                          
+    return true;
 }
 
 bool isValidSentence (string sentencia){
@@ -81,7 +82,7 @@ bool isValidSentence (string sentencia){
     if(accion == "SIN_STOCK") { return isValidSIN_STOCK(sentencia); }
     if(accion == "REPO") { return isValidREPO(sentencia); }
     if(accion == "LIST") { return isValidLIST(sentencia); }
-    if(accion == "QUIT") isValidQUIT(sentencia); 
+    if(accion == "QUIT") return isValidQUIT(sentencia); 
 
     return false;
 }
@@ -126,10 +127,11 @@ int main(int argc, char *argv[]){
     }
 
     string comando;
+    
+    signal(SIGINT, SIG_IGN);
 
     cout << "INGRESE COMANDO: ";
     getline(cin, comando);
-
     while(true){
 
         if(isValidSentence(comando)){

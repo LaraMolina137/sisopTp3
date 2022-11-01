@@ -1,0 +1,5 @@
+ID;DESCRIPCION;PRECIO;COSTO;STOCK;
+1;Azucar;20;10;6;
+2;Yerba Mate Playadito;180;120;100;
+3;Cafe La Virginia;200;150;0;
+4;Detergente;50;20;10;
