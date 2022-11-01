@@ -42,10 +42,37 @@ class Process
         
 };
 
-int main()
+
+void help()
+{
+    cout << "Este script se encarga de crear procesos, sin la necesidad de enviar parametros."<<endl;
+    cout << "• 2 procesos hijos" <<endl;
+    cout << "• 3 procesos nietos" <<endl;
+    cout << "• 5 procesos bisnietos" <<endl;
+    cout << "• 2 procesos zombies, en cualquier nivel" <<endl;
+    cout << "• 1 proceso demonio, que debe quedar activo" <<endl;
+    cout << "Ejemplo: ./ejercicio1"<< endl;
+
+}
+
+void validation(int arc,  char *argv[]) {
+    if(arc != 1){
+        if (!strcmp(argv[1],"--help") || !strcmp(argv[1], "-h")){
+            help();
+            exit(0);
+        }else{
+            cout << "La cantidad de parametros es incorrecta, consulte el help enviando --help o -h" << endl;
+            exit(1);
+        }
+    }
+}
+
+int main(int arc,  char *argv[])
 {
     pid_t pid, pidz;
 
+    validation(arc, argv);
+    
     pid = fork();
 
     if(pid > 0) { //padre
