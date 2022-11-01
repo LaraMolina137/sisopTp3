@@ -10,12 +10,12 @@ class Process
         pid_t   pid;
         pid_t   ppid;
         int     numberGeneration;
-        char*   relationShip;
+        string   relationShip;
     
         Process(){
 
         }
-        Process(pid_t pid, pid_t ppid, int numberGeneration, char* relationShip)
+        Process(pid_t pid, pid_t ppid, int numberGeneration, string relationShip)
         {
             this->pid = pid;
             this->ppid = ppid;
@@ -86,7 +86,7 @@ int main()
     }
     else if (pid == 0) { //hijo 1
         pid_t p = getppid();
-        Process son(getpid(), p, 2, "hijo");
+        Process son(getpid(), p, 2, "hijo/proceso");
         son.message();
 
         pid = son.createSon();
@@ -153,12 +153,9 @@ int main()
                     if(pid > 0){
                         exit(0);
                     }else if (pid == 0){
-                        pid = fork();
-                        if(pid > 0){
-                             Process daemon(getpid(), 1, 5, "demonio");
-                            daemon.message();
-                            while (true){}
-                        }
+                        Process daemon(getpid(), 1, 5, "demonio");
+                        daemon.message();
+                        while (true){}
 
                     }
                 }
