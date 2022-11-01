@@ -49,7 +49,7 @@ string ejecutarSTOCK(string sentencia, char* nombreArchivo) {
 
         if((strcmp(id.c_str(),datoId.c_str())) == 0){
             file.close();
-            return "\nDescripcion: " + descripcion + "\n" + "Stock: " + stock;
+            return "\n" + descripcion + " " + stock + "u";
         }
 	}
 
@@ -75,13 +75,13 @@ string ejecutarSIN_STOCK(char* nombreArchivo) {
 
         if((strcmp(stock.c_str(),"0")) == 0){
             index++;
-            resultado += "\nProducto: " + to_string(index) + "\n" + "Id: " + id + "\n" + "Descripcion: " + descripcion + "\n" + "Costo: " + costo + "\n"; 
+            resultado +=  id + " " + descripcion + " $" + costo + "\n"; 
         }
 	}
 
     file.close();
 
-    return resultado;
+    return "\n" + resultado;
 }
 
 string ejecutarREPO(string sentencia, char* nombreArchivo) {
@@ -104,14 +104,14 @@ string ejecutarREPO(string sentencia, char* nombreArchivo) {
 
         if((strcmp(stock.c_str(),"0")) == 0){
             calculo = stoi(costo,nullptr,10) * stoi( cantidad,nullptr, 10);
-            resultado += "\nProducto_Id: " + id + "\n" 
-            + "Costo total para poder reponer: " +  to_string(calculo) + "\n"; 
+            resultado += id + " " 
+            + "$" +  to_string(calculo) + "\n"; 
         }
 	}
 
     file.close();
 
-    return resultado;
+    return "\n" + resultado;
 }
 
 string ejecutarLIST(char* nombreArchivo) {
@@ -131,17 +131,14 @@ string ejecutarLIST(char* nombreArchivo) {
 
         if(strcmp(id.c_str(), "ID") != 0){
             index++;
-            resultado += "\nProducto: " + to_string(index) + "\n" 
-            + "Id: " + id + "\n" 
-            + "Descripcion: " + descripcion + "\n" 
-            + "Precio: " + precio + "\n"; 
+            resultado += id + " " + descripcion + " $" + precio + "\n"; 
         }
 
 	}
 
     file.close();
 
-    return resultado;
+    return "\n" + resultado;
 }
 
 void ejecutarQUIT() {
@@ -188,7 +185,7 @@ void help()
 int main(int argc, char *argv[]){
 
     if (argc != 2) {
-        cout << "La cantidad de parametros es incorrecta";
+        cout << "La cantidad de parametros es incorrecta" << endl;
         return 1;
     }
     else if (!strcmp(argv[1],"--help") || !strcmp(argv[1], "-h")) {
