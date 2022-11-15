@@ -1,6 +1,7 @@
 #include <iostream>
 #include <sys/wait.h>
 #include <unistd.h>
+#include <cstring>
 
 using namespace std;
 

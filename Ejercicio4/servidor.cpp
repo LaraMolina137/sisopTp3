@@ -26,6 +26,10 @@
 #include <csignal>
 #include <syslog.h>
 #include <unistd.h>
+#include <sys/types.h>
+#include <dirent.h>
+#include <errno.h>
+#include <vector>
 
 using namespace std;
 
@@ -45,9 +49,9 @@ using namespace std;
 
 
 #define ISRUNNING "\
-#/bin/bash \n\
+#!/bin/bash  \n\
  val=$(ps -ef | grep serverdito4 | wc -l) \n\
- return $val \n\
+ exit $val \n\
 "
 
 sem_t *mutexBaja, *mutexAlta, *mutexConsulta, *mutexRespBaja, *mutexRespAlta, *mutexRespConsulta;
@@ -141,9 +145,56 @@ void makeDaemon(){
 
 }
 
+
+int getProcIdByName(string procName)
+{
+    int currPid = ::getpid();
+    int pid = -1;
+    // Open the /proc directory
+    DIR *dp = opendir("/proc");
+    if (dp != NULL)
+    {
+        // Enumerate all entries in directory until process found
+        struct dirent *dirp;
+        while (pid < 0 && (dirp = readdir(dp)))
+        {
+            // Skip non-numeric entries
+            int id = atoi(dirp->d_name);
+            if (id > 0)
+            {
+                // Read contents of virtual /proc/{pid}/cmdline file
+                string cmdPath = string("/proc/") + dirp->d_name + "/cmdline";
+                ifstream cmdFile(cmdPath.c_str());
+                string cmdLine;
+                getline(cmdFile, cmdLine);
+                if (!cmdLine.empty())
+                {
+                    // Keep first cmdline item which contains the program path
+                    size_t pos = cmdLine.find('\0');
+                    if (pos != string::npos)
+                        cmdLine = cmdLine.substr(0, pos);
+                    // Keep program name only, removing the path
+                    pos = cmdLine.rfind('/');
+                    if (pos != string::npos)
+                        cmdLine = cmdLine.substr(pos + 1);
+                    // Compare against requested process name
+                    if (procName == cmdLine && id != currPid)
+                        pid = id;
+                }
+            }
+        }
+       return pid;
+    }
+
+    closedir(dp);
+
+    return pid;
+}
+
+
 int main(int argc, const char *argv[])
 {   
-    if(system(ISRUNNING) >= 2){
+    if(getProcIdByName("serverdito4") > 0){
         cout << "Ya hay una instancia en ejecucion" << endl;
         exit(EXIT_FAILURE);
     }

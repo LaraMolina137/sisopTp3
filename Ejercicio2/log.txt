@@ -1,0 +1,2 @@
+Creando un hilo watcher, notify_fd=4 filenum=0
+Crando un hilo para remover los watches

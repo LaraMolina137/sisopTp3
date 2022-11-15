@@ -59,7 +59,7 @@ static void sigfunc(int sig_num)
 	if (sig_num == SIGINT)
 		stopped = 1;
 	else
-		printf("Ni puta idea que señal es!\n");
+		printf("No se que señal es!\n");
 }
 
 static void *__add_watches(void *ptr)
@@ -203,7 +203,7 @@ static int validar_args(int argc, char *argv[])
 {
     if (mostrar_ayuda(argc, argv[1]))
         exit(1);    
-    working_dir = optarg;
+    working_dir = argv[1];
 	return 0;
 }
 
@@ -230,7 +230,8 @@ int main(int argc, char *argv[])
 	sigemptyset( &setmask.sa_mask );
 	setmask.sa_handler = sigfunc;
 	setmask.sa_flags   = 0;
-	sigaction( SIGINT,  &setmask, (struct sigaction *) NULL );  
+
+	//sigaction( SIGINT,  &setmask, (struct sigaction *) NULL );  
 
 	pthread_attr_init(&attr);
 	pthread_attr_setstacksize(&attr, PTHREAD_STACK_MIN*2);
